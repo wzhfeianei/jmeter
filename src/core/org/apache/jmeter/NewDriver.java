@@ -19,6 +19,7 @@
 package org.apache.jmeter;
 
 // N.B. this must only use standard Java packages
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -35,6 +36,7 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.StringTokenizer;
+import java.util.logging.Logger;
 
 /**
  * Main class for JMeter - sets up initial classpath and the loader.
@@ -42,55 +44,79 @@ import java.util.StringTokenizer;
  */
 public final class NewDriver {
 
+
+
+    //文件分隔符
     private static final String CLASSPATH_SEPARATOR = File.pathSeparator;
-
+    //操作系统名称
     private static final String OS_NAME = System.getProperty("os.name");// $NON-NLS-1$
-
+    //操作系统名称小写
     private static final String OS_NAME_LC = OS_NAME.toLowerCase(java.util.Locale.ENGLISH);
-
+    //JAVA类路径
     private static final String JAVA_CLASS_PATH = "java.class.path";// $NON-NLS-1$
 
     /** The class loader to use for loading JMeter classes. */
+    //类加载器用来加载Jmeter的类文件
     private static final DynamicClassLoader loader;
 
     /** The directory JMeter is installed in. */
+    //Jmeter的安装字典,可以就是环境变量这些啥的
     private static final String JMETER_INSTALLATION_DIRECTORY;
-
+    //初始化的一个异常列表
     private static final List<Exception> EXCEPTIONS_IN_INIT = new ArrayList<>();
 
+    //新添加一个日志方便调试
+    static Logger log = Logger.getLogger("NewDriver.class");
+
+    //static初始化代码块
     static {
+        //URL链表
         final List<URL> jars = new LinkedList<>();
+        //class.paht路径
         final String initial_classpath = System.getProperty(JAVA_CLASS_PATH);
 
         // Find JMeter home dir from the initial classpath
+
+        //寻找JmeterHome目录,根据操作系统不同有不同的路径标记
         String tmpDir;
         StringTokenizer tok = new StringTokenizer(initial_classpath, File.pathSeparator);
+        log.info(tok.toString());
+
         if (tok.countTokens() == 1
                 || (tok.countTokens()  == 2 // Java on Mac OS can add a second entry to the initial classpath
                     && OS_NAME_LC.startsWith("mac os x")// $NON-NLS-1$
                    )
            ) {
+
             File jar = new File(tok.nextToken());
+            log.info(tok.nextToken());
             try {
                 tmpDir = jar.getCanonicalFile().getParentFile().getParent();
+                log.info("路径为"+tmpDir);
             } catch (IOException e) {
                 tmpDir = null;
             }
         } else {// e.g. started from IDE with full classpath
             tmpDir = System.getProperty("jmeter.home","");// Allow override $NON-NLS-1$ $NON-NLS-2$
+            log.info("IDE启动时的路径"+tmpDir);
             if (tmpDir.length() == 0) {
                 File userDir = new File(System.getProperty("user.dir"));// $NON-NLS-1$
                 tmpDir = userDir.getAbsoluteFile().getParent();
+                log.info("user.dir的路径"+tmpDir);
             }
         }
+        //jmeter的安装路径
         JMETER_INSTALLATION_DIRECTORY=tmpDir;
 
         /*
          * Does the system support UNC paths? If so, may need to fix them up
          * later
          */
+        //判断系统支持的路径类型
         boolean usesUNC = OS_NAME_LC.startsWith("windows");// $NON-NLS-1$
 
+
+        //添加必须JAR包对应路径
         // Add standard jar locations to initial classpath
         StringBuilder classpath = new StringBuilder();
         File[] libDirs = new File[] { new File(JMETER_INSTALLATION_DIRECTORY + File.separator + "lib"),// $NON-NLS-1$ $NON-NLS-2$
@@ -103,10 +129,11 @@ public final class NewDriver {
                 continue;
             }
             Arrays.sort(libJars); // Bug 50708 Ensure predictable order of jars
+
             for (File libJar : libJars) {
                 try {
                     String s = libJar.getPath();
-
+                    //不同系统时的路径处理
                     // Fix path to allow the use of UNC URLs
                     if (usesUNC) {
                         if (s.startsWith("\\\\") && !s.startsWith("\\\\\\")) {// $NON-NLS-1$ $NON-NLS-2$
@@ -127,6 +154,10 @@ public final class NewDriver {
 
         // ClassFinder needs the classpath
         System.setProperty(JAVA_CLASS_PATH, initial_classpath + classpath.toString());
+
+        log.info("设置系统类路径为环境变量,"+initial_classpath + classpath.toString());
+
+
         loader = AccessController.doPrivileged(
                 (PrivilegedAction<DynamicClassLoader>) () ->
                         new DynamicClassLoader(jars.toArray(new URL[jars.size()]))
@@ -224,6 +255,7 @@ public final class NewDriver {
         return JMETER_INSTALLATION_DIRECTORY;
     }
 
+
     /**
      * The main program which actually runs JMeter.
      *
@@ -231,11 +263,14 @@ public final class NewDriver {
      *            the command line arguments
      */
     public static void main(String[] args) {
+//          String[]  params = new String[]{
+//                "-n","-tD:\\apitest\\src\\test\\jmeter\\云商B2B新架构接口性能测试.jmx","-llogFile3.jtl","-e","-oreprot3"
+//        };
         if(!EXCEPTIONS_IN_INIT.isEmpty()) {
             System.err.println("Configuration error during init, see exceptions:"+exceptionsToString(EXCEPTIONS_IN_INIT));
         } else {
-            Thread.currentThread().setContextClassLoader(loader);
 
+            Thread.currentThread().setContextClassLoader(loader);
             setLoggingProperties(args);
 
             try {

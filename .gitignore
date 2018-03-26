@@ -7,6 +7,7 @@ printable_docs/
 reports/
 site/
 target/
+classes/
 
 !bin/report-template/**/dist
 
