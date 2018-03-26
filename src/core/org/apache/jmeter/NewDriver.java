@@ -155,7 +155,7 @@ public final class NewDriver {
         // ClassFinder needs the classpath
         System.setProperty(JAVA_CLASS_PATH, initial_classpath + classpath.toString());
 
-        log.info("设置系统类路径为环境变量,"+initial_classpath + classpath.toString());
+        //log.info("设置系统类路径为环境变量,"+initial_classpath + classpath.toString());
 
 
         loader = AccessController.doPrivileged(
@@ -274,10 +274,17 @@ public final class NewDriver {
             setLoggingProperties(args);
 
             try {
+                //加载Jmeter类并实例好,用反射调用了start方法
                 Class<?> initialClass = loader.loadClass("org.apache.jmeter.JMeter");// $NON-NLS-1$
                 Object instance = initialClass.newInstance();
                 Method startup = initialClass.getMethod("start", new Class[] { new String[0].getClass() });// $NON-NLS-1$
+                log.info("启动参数的大小为"+args.length);
+                for(String s:args){
+                    log.info("启动参数为:"+s);
+                }
+
                 startup.invoke(instance, new Object[] { args });
+
             } catch(Throwable e){ // NOSONAR We want to log home directory in case of exception
                 e.printStackTrace(); // NOSONAR No logger at this step
                 System.err.println("JMeter home directory was detected as: "+JMETER_INSTALLATION_DIRECTORY);
