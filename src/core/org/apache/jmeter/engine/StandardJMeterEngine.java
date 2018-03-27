@@ -108,6 +108,7 @@ public class StandardJMeterEngine implements JMeterEngine, Runnable {
     public StandardJMeterEngine(String host) {
         this.host = host;
         // Hack to allow external control
+
         initSingletonEngine(this);
     }
     /**
@@ -169,6 +170,9 @@ public class StandardJMeterEngine implements JMeterEngine, Runnable {
         SearchByClass<TestPlan> testPlan = new SearchByClass<>(TestPlan.class);
         testTree.traverse(testPlan);
         Object[] plan = testPlan.getSearchResults().toArray();
+
+
+
         if (plan.length == 0) {
             throw new RuntimeException("Could not find the TestPlan class!");
         }
@@ -188,6 +192,7 @@ public class StandardJMeterEngine implements JMeterEngine, Runnable {
         try {
             Thread runningThread = new Thread(this, "StandardJMeterEngine");
             runningThread.start();
+            System.out.println("开始测试,测试线程为"+runningThread.getId());
         } catch (Exception err) {
             stopTest();
             throw new JMeterEngineException(err);
@@ -320,6 +325,7 @@ public class StandardJMeterEngine implements JMeterEngine, Runnable {
         
         @Override
         public void run() {
+            System.out.println("进入引擎RUN方法");
             running = false;
             resetSingletonEngine();
             if (now) {
@@ -351,32 +357,42 @@ public class StandardJMeterEngine implements JMeterEngine, Runnable {
 
     @Override
     public void run() {
+
+        System.out.println("测试线程开始引擎的Run方法.....");
         log.info("Running the test!");
         running = true;
 
         /*
          * Ensure that the sample variables are correctly initialised for each run.
          */
+
         SampleEvent.initSampleVariables();
 
         JMeterContextService.startTest();
         try {
             PreCompiler compiler = new PreCompiler();
+            //预编译测试脚本
+            System.out.println("预编译测试脚本");
             test.traverse(compiler);
+
         } catch (RuntimeException e) {
             log.error("Error occurred compiling the tree:",e);
             JMeterUtils.reportErrorToUser("Error occurred compiling the tree: - see log file", e);
             return; // no point continuing
         }
+
         /**
          * Notification of test listeners needs to happen after function
          * replacement, but before setting RunningVersion to true.
          */
+
+
         SearchByClass<TestStateListener> testListeners = new SearchByClass<>(TestStateListener.class); // TL - S&E
         test.traverse(testListeners);
 
         // Merge in any additional test listeners
         // currently only used by the function parser
+
         testListeners.getSearchResults().addAll(testList);
         testList.clear(); // no longer needed
 
@@ -406,8 +422,11 @@ public class StandardJMeterEngine implements JMeterEngine, Runnable {
 
         int groupCount = 0;
         JMeterContextService.clearTotalThreads();
-        
+
         if (setupIter.hasNext()) {
+            //线程组设置
+            System.out.println("Starting setUp ThreadGroup: {} : {} "+groupCount);
+
             log.info("Starting setUp thread groups");
             while (running && setupIter.hasNext()) {//for each setup thread group
                 AbstractThreadGroup group = setupIter.next();
@@ -510,6 +529,9 @@ public class StandardJMeterEngine implements JMeterEngine, Runnable {
             boolean onErrorStopThread = group.getOnErrorStopThread();
             boolean onErrorStartNextLoop = group.getOnErrorStartNextLoop();
             String groupName = group.getName();
+
+            System.out.println("开始线程组"+group.getName()+"testLevelElements"+testLevelElements);
+
             log.info("Starting {} threads for group {}.", numThreads, groupName);
             if (onErrorStopTest) {
                 log.info("Test will stop on error");

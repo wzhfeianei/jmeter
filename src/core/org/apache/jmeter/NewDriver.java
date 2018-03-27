@@ -263,9 +263,9 @@ public final class NewDriver {
      *            the command line arguments
      */
     public static void main(String[] args) {
-//          String[]  params = new String[]{
-//                "-n","-tD:\\apitest\\src\\test\\jmeter\\云商B2B新架构接口性能测试.jmx","-llogFile3.jtl","-e","-oreprot3"
-//        };
+          String[]  params = new String[]{
+                "-n","-tD:\\apitest\\src\\test\\jmeter\\TP_25_test.jmx","-llogFile.jtl","-e","-oreport"
+        };
         if(!EXCEPTIONS_IN_INIT.isEmpty()) {
             System.err.println("Configuration error during init, see exceptions:"+exceptionsToString(EXCEPTIONS_IN_INIT));
         } else {
@@ -278,12 +278,13 @@ public final class NewDriver {
                 Class<?> initialClass = loader.loadClass("org.apache.jmeter.JMeter");// $NON-NLS-1$
                 Object instance = initialClass.newInstance();
                 Method startup = initialClass.getMethod("start", new Class[] { new String[0].getClass() });// $NON-NLS-1$
-                log.info("启动参数的大小为"+args.length);
-                for(String s:args){
+
+                log.info("启动参数的大小为"+params.length);
+                for(String s:params){
                     log.info("启动参数为:"+s);
                 }
 
-                startup.invoke(instance, new Object[] { args });
+                startup.invoke(instance, new Object[] { params });
 
             } catch(Throwable e){ // NOSONAR We want to log home directory in case of exception
                 e.printStackTrace(); // NOSONAR No logger at this step

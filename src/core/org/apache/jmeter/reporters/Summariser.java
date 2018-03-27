@@ -313,10 +313,10 @@ public class Summariser extends AbstractTestElement
             // Only print final delta if there were some samples in the delta
             // and there has been at least one sample reported previously
             if (total.delta.getNumSamples() > 0 && total.total.getNumSamples() >  0) {
-                formatAndWriteToLog(name, total.delta, "+");
+                formatAndWriteToLog(name, total.delta, "+++");
             }
             total.moveDelta(); // This will update the total endTime
-            formatAndWriteToLog(name, total.total, "=");
+            formatAndWriteToLog(name, total.total, "===");
         }
     }
 

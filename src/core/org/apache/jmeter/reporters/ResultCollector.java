@@ -79,6 +79,7 @@ public class ResultCollector extends AbstractListenerElement implements SampleLi
 
         @Override
         public void run() {
+            System.out.println("Shutdown hook started");
             log.info("Shutdown hook started");
             synchronized (LOCK) {
                 flushFileOutput();                    
@@ -426,14 +427,17 @@ public class ResultCollector extends AbstractListenerElement implements SampleLi
             writer.print("\n"); // $NON-NLS-1$
         } else if (saveConfig.saveFieldNames()) {
             writer.println(CSVSaveService.printableFieldNamesToString(saveConfig));
+            System.out.println("日志输入的流"+CSVSaveService.printableFieldNamesToString(saveConfig));
         }
     }
 
     private static void writeFileEnd(PrintWriter pw, SampleSaveConfiguration saveConfig) {
         if (saveConfig.saveAsXml()) {
+            System.out.println("写入日志尾-------------");
             pw.print("\n"); // $NON-NLS-1$
             pw.print(TESTRESULTS_END);
             pw.print("\n");// Added in version 1.1 // $NON-NLS-1$
+
         }
     }
 
@@ -442,12 +446,16 @@ public class ResultCollector extends AbstractListenerElement implements SampleLi
         if (pFilename == null || pFilename.length() == 0) {
             return null;
         }
+
+        //写入JTL日志
         if(log.isDebugEnabled()) {
             log.debug("Getting file: {} in thread {}", pFilename, Thread.currentThread().getName());
         }
         String filename = FileServer.resolveBaseRelativeName(pFilename);
         filename = new File(filename).getCanonicalPath(); // try to ensure uniqueness (Bug 60822)
         FileEntry fe = files.get(filename);
+
+        System.out.println("写入JTL日志+++++++++++,写入文件:"+filename);
         PrintWriter writer = null;
         boolean trimmed = true;
 
@@ -552,7 +560,15 @@ public class ResultCollector extends AbstractListenerElement implements SampleLi
                     if (config.saveAsXml()) {
                         SaveService.saveSampleResult(event, out);
                     } else { // !saveAsXml
+                        //TODO 这里主要是把结果保存下来的方法,未来重点改造的地方
                         String savee = CSVSaveService.resultToDelimitedString(event);
+                        //System.out.println("进入resultcollector类的sampleOccurred方法");
+
+                        if (event.isTransactionSampleEvent()) {
+                            System.out.println("事务:"+event.getResult().toString());
+
+                        }
+                        System.out.println(savee);
                         out.println(savee);
                     }
                 } catch (Exception err) {
@@ -596,8 +612,10 @@ public class ResultCollector extends AbstractListenerElement implements SampleLi
      * Flush PrintWriter, called by Shutdown Hook to ensure no data is lost
      */
     private static void flushFileOutput() {
+        System.out.println("flushFileOutput------:");
         for(Map.Entry<String, ResultCollector.FileEntry> me : files.entrySet()) {
             String key = me.getKey();
+
             ResultCollector.FileEntry value = me.getValue();
             log.debug("Flushing: {}", key);
             value.pw.flush();

@@ -984,16 +984,18 @@ public class JMeter implements JMeterPlugin {
 
             //TODO 后续研究Jmeter把JTL解析为了hashtree的具体方式
             HashTree tree = SaveService.loadTree(f);
-            //一个解决的BUG的
+            //一个解决的BUG的行为
             @SuppressWarnings("deprecation") // Deliberate use of deprecated ctor
                     JMeterTreeModel treeModel = new JMeterTreeModel(new Object());// Create non-GUI version to avoid headless problems
             JMeterTreeNode root = (JMeterTreeNode) treeModel.getRoot();
             treeModel.addSubTree(tree, root);
-
+            //解析模块控制器
             // Hack to resolve ModuleControllers in non GUI mode
             SearchByClass<ReplaceableController> replaceableControllers =
                     new SearchByClass<>(ReplaceableController.class);
             tree.traverse(replaceableControllers);
+
+
             Collection<ReplaceableController> replaceableControllersRes = replaceableControllers.getSearchResults();
             for (ReplaceableController replaceableController : replaceableControllersRes) {
                 replaceableController.resolveReplacementSubTree(root);
@@ -1003,16 +1005,20 @@ public class JMeter implements JMeterPlugin {
             // For GUI runs this is done in Start.java
             convertSubTree(tree);
 
+
+            //结果收集器
             Summariser summariser = null;
             String summariserName = JMeterUtils.getPropDefault("summariser.name", "");//$NON-NLS-1$
             if (summariserName.length() > 0) {
                 log.info("Creating summariser <{}>", summariserName);
                 println("Creating summariser <" + summariserName + ">");
                 summariser = new Summariser(summariserName);
+                logger.info(summariserName);
             }
             ResultCollector resultCollector = null;
             if (logFile != null) {
                 resultCollector = new ResultCollector(summariser);
+                logger.info(logFile);
                 resultCollector.setFilename(logFile);
                 tree.add(tree.getArray()[0], resultCollector);
             } else {
@@ -1035,27 +1041,44 @@ public class JMeter implements JMeterPlugin {
                     }
                 }
             }
+
+            //生成报告
             ReportGenerator reportGenerator = null;
             if (logFile != null && generateReportDashboard) {
                 reportGenerator = new ReportGenerator(logFile, resultCollector);
             }
-
+            //用于远程通知线程启动/停止
             // Used for remote notification of threads start/stop,see BUG 54152
-            // Summariser uses this feature to compute correctly number of threads 
+            //结果使用这个特性来计算正确的线程数
+            // Summariser uses this feature to compute correctly number of threads
+            //非GUI模式下使用
             // when NON GUI mode is used
+            //添加一个RemoteThreadsListenerTestElement到tree
+            //TODO 要重要查看这个类
             tree.add(tree.getArray()[0], new RemoteThreadsListenerTestElement());
 
             List<JMeterEngine> engines = new LinkedList<>();
+
+            //TODO 要重要查看这个类
             tree.add(tree.getArray()[0], new ListenToTest(remoteStart && remoteStop ? engines : null, reportGenerator));
+
+
             println("Created the tree successfully using " + testFile);
+
             if (!remoteStart) {
+
+                //生成JMeterEngine
                 JMeterEngine engine = new StandardJMeterEngine();
+                //配置测试tree
                 engine.configure(tree);
                 long now = System.currentTimeMillis();
-                println("Starting the test @ " + new Date(now) + " (" + now + ")");
+                println("Starting the test no remoteStart @ " + new Date(now) + " (" + now + ")");
+                //启动测试
                 engine.runTest();
+                //添加到测试引擎
                 engines.add(engine);
             } else {
+                //如果是分布式测试模式
                 java.util.StringTokenizer st = new java.util.StringTokenizer(remoteHostsString, ",");//$NON-NLS-1$
                 List<String> hosts = new LinkedList<>();
                 while (st.hasMoreElements()) {
@@ -1069,7 +1092,11 @@ public class JMeter implements JMeterPlugin {
                 engines.addAll(distributedRunner.getEngines());
                 distributedRunner.start();
             }
+
+            //开始监控
             startUdpDdaemon(engines);
+
+
         } catch (Exception e) {
             System.out.println("Error in NonGUIDriver " + e.toString());//NOSONAR
             log.error("Error in NonGUIDriver", e);
@@ -1174,6 +1201,8 @@ public class JMeter implements JMeterPlugin {
          * @param reportGenerator {@link ReportGenerator}
          */
         public ListenToTest(List<JMeterEngine> engines, ReportGenerator reportGenerator) {
+
+            logger.info("开始监听测试...");
             this.engines = engines;
             this.reportGenerator = reportGenerator;
         }
@@ -1195,7 +1224,7 @@ public class JMeter implements JMeterPlugin {
         @Override
         public void testEnded() {
             long now = System.currentTimeMillis();
-            println("Tidying up ...    @ " + new Date(now) + " (" + now + ")");
+            println("Tidying up 测试结束 ...    @ " + new Date(now) + " (" + now + ")");
             try {
                 generateReport();
             } catch (Exception e) {
@@ -1231,7 +1260,7 @@ public class JMeter implements JMeterPlugin {
         @Override
         public void run() {
             long now = System.currentTimeMillis();
-            println("Tidying up remote @ " + new Date(now) + " (" + now + ")");
+            println("Tidying up 开始 remote @ " + new Date(now) + " (" + now + ")");
             if (engines != null) { // it will be null unless remoteStop = true
                 println("Exiting remote servers");
                 for (JMeterEngine e : engines) {
@@ -1251,7 +1280,7 @@ public class JMeter implements JMeterPlugin {
                 log.error("Error generating the report", e);
             }
             checkForRemainingThreads();
-            println("... end of run");
+            println("..... end of run");
         }
 
         /**
@@ -1355,17 +1384,21 @@ public class JMeter implements JMeterPlugin {
     }
 
     private static void startUdpDdaemon(final List<JMeterEngine> engines) {
+
         int port = JMeterUtils.getPropDefault("jmeterengine.nongui.port", UDP_PORT_DEFAULT); // $NON-NLS-1$
         int maxPort = JMeterUtils.getPropDefault("jmeterengine.nongui.maxport", 4455); // $NON-NLS-1$
         if (port > 1000) {
+            logger.info("进入守护进程"+engines);
             final DatagramSocket socket = getSocket(port, maxPort);
             if (socket != null) {
                 Thread waiter = new Thread("UDP Listener") {
                     @Override
+                    //重写的Run方法
                     public void run() {
                         waitForSignals(engines, socket);
                     }
                 };
+                logger.info("守护进程"+waiter.getName());
                 waiter.setDaemon(true);
                 waiter.start();
             } else {
@@ -1378,12 +1411,15 @@ public class JMeter implements JMeterPlugin {
         byte[] buf = new byte[80];
         System.out.println("Waiting for possible Shutdown/StopTestNow/Heapdump message on port " + socket.getLocalPort());//NOSONAR
         DatagramPacket request = new DatagramPacket(buf, buf.length);
+        logger.info("进入到waitForSignals方法,IP:"+request.getAddress());
         try {
             while (true) {
+                logger.info("进入到waitForSignals方法的while循环:"+request.getAddress());
                 socket.receive(request);
                 InetAddress address = request.getAddress();
                 // Only accept commands from the local host
                 if (address.isLoopbackAddress()) {
+                    logger.info("进入到waitForSignals方法的本地指令:"+request.getAddress());
                     String command = new String(request.getData(), request.getOffset(), request.getLength(), "ASCII");
                     System.out.println("Command: " + command + " received from " + address);//NOSONAR
                     log.info("Command: {} received from {}", command, address);
@@ -1407,8 +1443,10 @@ public class JMeter implements JMeterPlugin {
                 }
             }
         } catch (Exception e) {
+            logger.info("进入到waitForSignals方法的异常处理"+e.toString());
             System.out.println(e);//NOSONAR
         } finally {
+            logger.info("最终执行关闭soket,本地地址为"+socket.getLocalAddress());
             socket.close();
         }
     }
