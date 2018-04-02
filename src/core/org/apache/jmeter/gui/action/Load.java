@@ -47,7 +47,7 @@ import com.thoughtworks.xstream.converters.ConversionException;
 
 /**
  * Handles the Open (load a new file) and Merge commands.
- *
+ * GUI上的加载测试计划的Action ,注意抽离
  */
 public class Load extends AbstractActionWithNoRunningTest {
     private static final Logger log = LoggerFactory.getLogger(Load.class);

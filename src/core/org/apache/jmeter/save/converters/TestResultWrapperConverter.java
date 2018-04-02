@@ -38,7 +38,7 @@ import com.thoughtworks.xstream.mapper.Mapper;
 
 /**
  * XStream Class to convert TestResultWrapper
- *
+ * 测试结果转换相关
  */
 public class TestResultWrapperConverter extends AbstractCollectionConverter {
 

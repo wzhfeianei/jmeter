@@ -263,8 +263,14 @@ public final class NewDriver {
      *            the command line arguments
      */
     public static void main(String[] args) {
-          String[]  params = new String[]{
-                "-n","-tD:\\apitest\\src\\test\\jmeter\\TP_25_test.jmx","-llogFile.jtl","-e","-oreport"
+
+        //启动参数
+//          String[]  params = new String[]{
+//                "-n","-tD:\\apitest\\src\\test\\jmeter\\TP_25_test.jmx","-llogFile.jtl","-e","-oreport"
+//        };
+          //日志生成参数
+        String[]  params = new String[]{
+                "-gF:\\apache-jmeter-4.0\\bin\\TP_02友店_01_主要性能场景.jtl","-oTP_02友店_01_主要性能场景"
         };
         if(!EXCEPTIONS_IN_INIT.isEmpty()) {
             System.err.println("Configuration error during init, see exceptions:"+exceptionsToString(EXCEPTIONS_IN_INIT));

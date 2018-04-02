@@ -62,6 +62,7 @@ import com.thoughtworks.xstream.mapper.Mapper;
 import com.thoughtworks.xstream.mapper.MapperWrapper;
 
 /**
+ * 用于保存相关xml文件时的服务
  * Handles setting up XStream serialisation.
  * The class reads alias definitions from saveservice.properties.
  *
