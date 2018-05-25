@@ -59,7 +59,6 @@ public final class NewDriver {
     private static final List<Exception> EXCEPTIONS_IN_INIT = new ArrayList<>();
 
     static {
-        
         final List<URL> jars = new LinkedList<>();
         final String initial_classpath = System.getProperty(JAVA_CLASS_PATH);
 
